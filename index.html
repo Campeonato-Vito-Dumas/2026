@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultados de Regatas</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 15px; shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #003366; text-align: center; text-transform: uppercase; }
+        
+        /* Zona de carga */
+        .upload-card { border: 2px dashed #005b96; background: #f8fbff; padding: 20px; text-align: center; border-radius: 10px; margin-bottom: 30px; }
+        input[type="file"] { padding: 10px; }
+
+        /* Pestañas */
+        .tabs { display: flex; justify-content: center; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
+        .tab-btn { padding: 12px 25px; border: none; background: none; cursor: pointer; font-size: 16px; color: #666; transition: 0.3s; }
+        .tab-btn.active { color: #005b96; border-bottom: 4px solid #005b96; font-weight: bold; }
+
+        .content { display: none; }
+        .content.active { display: block; }
+
+        /* Tablas */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background-color: #003366; color: white; padding: 12px; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid #eee; }
+        tr:hover { background-color: #f9f9f9; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Campeonato de Regatas</h1>
+
+    <div class="upload-card">
+        <strong>Paso 1: Sube el Excel con las 4 hojas</strong><br><br>
+        <input type="file" id="upload" accept=".xlsx">
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab(event, 'General')">General</button>
+        <button class="tab-btn" onclick="openTab(event, 'SerieA')">Serie A</button>
+        <button class="tab-btn" onclick="openTab(event, 'SerieB')">Serie B</button>
+        <button class="tab-btn" onclick="openTab(event, 'SerieC')">Serie C</button>
+    </div>
+
+    <div id="General" class="content active">
+        <table id="table-General"><thead><tr id="head-General"></tr></thead><tbody></tbody></table>
+    </div>
+    <div id="SerieA" class="content">
+        <table id="table-SerieA"><thead><tr id="head-SerieA"></tr></thead><tbody></tbody></table>
+    </div>
+    <div id="SerieB" class="content">
+        <table id="table-SerieB"><thead><tr id="head-SerieB"></tr></thead><tbody></tbody></table>
+    </div>
+    <div id="SerieC" class="content">
+        <table id="table-SerieC"><thead><tr id="head-SerieC"></tr></thead><tbody></tbody></table>
+    </div>
+</div>
+
+<script>
+    function openTab(evt, tabName) {
+        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabName).classList.add('active');
+        evt.currentTarget.classList.add('active');
+    }
+
+    document.getElementById('upload').addEventListener('change', function(e) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const data = new Uint8Array(event.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+
+            // Procesamos cada una de tus 4 hojas
+            procesarHoja(workbook, "General", "General");
+            procesarHoja(workbook, "Serie A", "SerieA");
+            procesarHoja(workbook, "Serie B", "SerieB");
+            procesarHoja(workbook, "Serie C", "SerieC");
+
+            alert("¡Resultados cargados correctamente!");
+        };
+        reader.readAsArrayBuffer(e.target.files[0]);
+    });
+
+    function procesarHoja(workbook, nombreHojaExcel, idDestino) {
+        const sheet = workbook.Sheets[nombreHojaExcel];
+        if (!sheet) return; // Si no existe la hoja en el Excel, no hace nada
+
+        const json = XLSX.utils.sheet_to_json(sheet);
+        const tbody = document.querySelector(`#table-${idDestino} tbody`);
+        const theadRow = document.getElementById(`head-${idDestino}`);
+        
+        tbody.innerHTML = "";
+        theadRow.innerHTML = "";
+
+        if (json.length > 0) {
+            // Crear encabezados dinámicamente según tu Excel
+            Object.keys(json[0]).forEach(key => {
+                theadRow.innerHTML += `<th>${key}</th>`;
+            });
+
+            // Llenar las filas
+            json.forEach(fila => {
+                let rowHtml = "<tr>";
+                Object.values(fila).forEach(valor => {
+                    rowHtml += `<td>${valor}</td>`;
+                });
+                rowHtml += "</tr>";
+                tbody.innerHTML += rowHtml;
+            });
+        }
+    }
+</script>
+
+</body>
+</html>

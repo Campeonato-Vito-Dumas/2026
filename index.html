@@ -3,32 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resultados de Regatas en Vivo</title>
+    <title>Campeonato Vito Dumas - Resultados</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #003366; text-align: center; }
-        .status { text-align: center; color: #666; font-size: 0.9em; margin-bottom: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f9; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h1 { color: #003366; text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+        .status-bar { text-align: center; margin-bottom: 25px; padding: 10px; border-radius: 8px; font-size: 0.9em; background: #eef2f7; color: #555; }
         
-        .tabs { display: flex; justify-content: center; margin-bottom: 20px; border-bottom: 2px solid #ddd; flex-wrap: wrap; }
-        .tab-btn { padding: 12px 25px; border: none; background: none; cursor: pointer; font-size: 16px; color: #666; }
-        .tab-btn.active { color: #005b96; border-bottom: 4px solid #005b96; font-weight: bold; }
+        /* Sistema de Pestañas */
+        .tabs { display: flex; justify-content: center; gap: 5px; margin-bottom: 25px; border-bottom: 2px solid #eee; flex-wrap: wrap; }
+        .tab-btn { padding: 12px 20px; border: none; background: none; cursor: pointer; font-size: 16px; color: #888; font-weight: 500; transition: 0.3s; border-bottom: 3px solid transparent; }
+        .tab-btn:hover { color: #005b96; background: #f0f5f9; }
+        .tab-btn.active { color: #005b96; border-bottom: 3px solid #005b96; font-weight: bold; }
 
-        .content { display: none; }
-        .content.active { display: block; }
+        /* Contenido y Tablas */
+        .content { display: none; overflow-x: auto; }
+        .content.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { background-color: #003366; color: white; padding: 12px; text-align: left; }
-        td { padding: 12px; border-bottom: 1px solid #eee; }
-        tr:nth-child(even) { background-color: #f8f9fa; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 500px; }
+        th { background-color: #003366; color: white; padding: 15px 12px; text-align: left; font-size: 0.9em; }
+        td { padding: 12px; border-bottom: 1px solid #edf2f7; font-size: 0.95em; }
+        tr:nth-child(even) { background-color: #fcfdfe; }
+        tr:hover { background-color: #f1f5f9; }
+
+        .error-msg { color: #d9534f; font-weight: bold; padding: 20px; text-align: center; border: 1px solid #d9534f; border-radius: 8px; background: #fff5f5; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Campeonato de Regatas 2026</h1>
-    <div id="loading" class="status">Cargando resultados oficiales...</div>
+    <h1>Campeonato Vito Dumas</h1>
+    <div id="status" class="status-bar">Conectando con Google Sheets...</div>
 
     <div class="tabs">
         <button class="tab-btn active" onclick="openTab(event, 'General')">General</button>
@@ -52,10 +59,8 @@
 </div>
 
 <script>
-    // --- CONFIGURACIÓN ---
-    // REEMPLAZA LO QUE ESTÁ ENTRE COMILLAS POR TU ID DE GOOGLE SHEETS
+    // ID DE TU HOJA YA CONFIGURADO
     const SHEET_ID = '1w2EHN7ujpacckhvw8ok0I4HWtu1r63UNWF9zI_-Rh6o'; 
-    // ---------------------
 
     function openTab(evt, tabName) {
         document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
@@ -65,28 +70,48 @@
     }
 
     async function cargarDatos() {
+        const statusDiv = document.getElementById('status');
+        // Usamos el formato de exportación directa de Google
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=xlsx`;
         
         try {
             const response = await fetch(url);
+            if (!response.ok) throw new Error('No se pudo acceder al archivo. Verifica la publicación.');
+            
             const arrayBuffer = await response.arrayBuffer();
             const workbook = XLSX.read(new Uint8Array(arrayBuffer), {type: 'array'});
 
-            procesarHoja(workbook, "General", "General");
-            procesarHoja(workbook, "Serie A", "SerieA");
-            procesarHoja(workbook, "Serie B", "SerieB");
-            procesarHoja(workbook, "Serie C", "SerieC");
+            // Procesamos cada pestaña
+            const sheetsMap = {
+                "General": "General",
+                "Serie A": "SerieA",
+                "Serie B": "SerieB",
+                "Serie C": "SerieC"
+            };
 
-            document.getElementById('loading').innerText = "Resultados actualizados en tiempo real";
+            let cargadas = 0;
+            for (const [nombreExcel, idHTML] of Object.entries(sheetsMap)) {
+                if (procesarHoja(workbook, nombreExcel, idHTML)) {
+                    cargadas++;
+                }
+            }
+
+            if (cargadas > 0) {
+                statusDiv.innerHTML = "✅ Resultados actualizados en tiempo real";
+                statusDiv.style.color = "#28a745";
+            } else {
+                throw new Error('No se encontraron las pestañas "General", "Serie A", etc. en el Excel.');
+            }
+
         } catch (error) {
-            document.getElementById('loading').innerText = "Error al cargar datos. Verifica que la hoja esté publicada.";
+            statusDiv.innerHTML = `<div class="error-msg">⚠️ Error: ${error.message}<br><small>Asegúrate de haber ido a Archivo > Compartir > Publicar en la Web en Google Sheets.</small></div>`;
             console.error(error);
         }
     }
 
     function procesarHoja(workbook, nombreHojaExcel, idDestino) {
         const sheet = workbook.Sheets[nombreHojaExcel];
-        if (!sheet) return;
+        if (!sheet) return false;
 
         const json = XLSX.utils.sheet_to_json(sheet);
         const tbody = document.querySelector(`#table-${idDestino} tbody`);
@@ -96,23 +121,27 @@
         theadRow.innerHTML = "";
 
         if (json.length > 0) {
+            // Cabeceras
             Object.keys(json[0]).forEach(key => {
                 theadRow.innerHTML += `<th>${key}</th>`;
             });
 
+            // Filas
             json.forEach(fila => {
                 let rowHtml = "<tr>";
                 Object.values(fila).forEach(valor => {
-                    rowHtml += `<td>${valor}</td>`;
+                    rowHtml += `<td>${valor || ''}</td>`;
                 });
                 rowHtml += "</tr>";
                 tbody.innerHTML += rowHtml;
             });
+            return true;
         }
+        return false;
     }
 
-    // Iniciar carga al abrir la página
-    cargarDatos();
+    // Ejecutar al cargar la página
+    window.onload = cargarDatos;
 </script>
 
 </body>

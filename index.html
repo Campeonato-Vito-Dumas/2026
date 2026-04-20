@@ -3,41 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resultados de Regatas</title>
+    <title>Resultados de Regatas en Vivo</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 15px; shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #003366; text-align: center; text-transform: uppercase; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #003366; text-align: center; }
+        .status { text-align: center; color: #666; font-size: 0.9em; margin-bottom: 20px; }
         
-        /* Zona de carga */
-        .upload-card { border: 2px dashed #005b96; background: #f8fbff; padding: 20px; text-align: center; border-radius: 10px; margin-bottom: 30px; }
-        input[type="file"] { padding: 10px; }
-
-        /* Pestañas */
-        .tabs { display: flex; justify-content: center; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
-        .tab-btn { padding: 12px 25px; border: none; background: none; cursor: pointer; font-size: 16px; color: #666; transition: 0.3s; }
+        .tabs { display: flex; justify-content: center; margin-bottom: 20px; border-bottom: 2px solid #ddd; flex-wrap: wrap; }
+        .tab-btn { padding: 12px 25px; border: none; background: none; cursor: pointer; font-size: 16px; color: #666; }
         .tab-btn.active { color: #005b96; border-bottom: 4px solid #005b96; font-weight: bold; }
 
         .content { display: none; }
         .content.active { display: block; }
 
-        /* Tablas */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { background-color: #003366; color: white; padding: 12px; text-align: left; }
         td { padding: 12px; border-bottom: 1px solid #eee; }
-        tr:hover { background-color: #f9f9f9; }
+        tr:nth-child(even) { background-color: #f8f9fa; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Campeonato de Regatas</h1>
-
-    <div class="upload-card">
-        <strong>Paso 1: Sube el Excel con las 4 hojas</strong><br><br>
-        <input type="file" id="upload" accept=".xlsx">
-    </div>
+    <h1>Campeonato de Regatas 2026</h1>
+    <div id="loading" class="status">Cargando resultados oficiales...</div>
 
     <div class="tabs">
         <button class="tab-btn active" onclick="openTab(event, 'General')">General</button>
@@ -61,6 +52,11 @@
 </div>
 
 <script>
+    // --- CONFIGURACIÓN ---
+    // REEMPLAZA LO QUE ESTÁ ENTRE COMILLAS POR TU ID DE GOOGLE SHEETS
+    const SHEET_ID = '1jopQ4ApqKU3kQ9wHRaj9N7IM0F1EhfoSfeXn_b61jmw'; 
+    // ---------------------
+
     function openTab(evt, tabName) {
         document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -68,26 +64,29 @@
         evt.currentTarget.classList.add('active');
     }
 
-    document.getElementById('upload').addEventListener('change', function(e) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            const data = new Uint8Array(event.target.result);
-            const workbook = XLSX.read(data, {type: 'array'});
+    async function cargarDatos() {
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=xlsx`;
+        
+        try {
+            const response = await fetch(url);
+            const arrayBuffer = await response.arrayBuffer();
+            const workbook = XLSX.read(new Uint8Array(arrayBuffer), {type: 'array'});
 
-            // Procesamos cada una de tus 4 hojas
             procesarHoja(workbook, "General", "General");
             procesarHoja(workbook, "Serie A", "SerieA");
             procesarHoja(workbook, "Serie B", "SerieB");
             procesarHoja(workbook, "Serie C", "SerieC");
 
-            alert("¡Resultados cargados correctamente!");
-        };
-        reader.readAsArrayBuffer(e.target.files[0]);
-    });
+            document.getElementById('loading').innerText = "Resultados actualizados en tiempo real";
+        } catch (error) {
+            document.getElementById('loading').innerText = "Error al cargar datos. Verifica que la hoja esté publicada.";
+            console.error(error);
+        }
+    }
 
     function procesarHoja(workbook, nombreHojaExcel, idDestino) {
         const sheet = workbook.Sheets[nombreHojaExcel];
-        if (!sheet) return; // Si no existe la hoja en el Excel, no hace nada
+        if (!sheet) return;
 
         const json = XLSX.utils.sheet_to_json(sheet);
         const tbody = document.querySelector(`#table-${idDestino} tbody`);
@@ -97,12 +96,10 @@
         theadRow.innerHTML = "";
 
         if (json.length > 0) {
-            // Crear encabezados dinámicamente según tu Excel
             Object.keys(json[0]).forEach(key => {
                 theadRow.innerHTML += `<th>${key}</th>`;
             });
 
-            // Llenar las filas
             json.forEach(fila => {
                 let rowHtml = "<tr>";
                 Object.values(fila).forEach(valor => {
@@ -113,6 +110,9 @@
             });
         }
     }
+
+    // Iniciar carga al abrir la página
+    cargarDatos();
 </script>
 
 </body>

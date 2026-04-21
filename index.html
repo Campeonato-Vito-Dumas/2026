@@ -8,8 +8,7 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f9; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        h1 { color: #003366; text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
-        .status-bar { text-align: center; margin-bottom: 25px; padding: 10px; border-radius: 8px; font-size: 0.9em; background: #eef2f7; color: #555; }
+        h1 { color: #003366; text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 30px; }
         
         /* Sistema de Pestañas */
         .tabs { display: flex; justify-content: center; gap: 5px; margin-bottom: 25px; border-bottom: 2px solid #eee; flex-wrap: wrap; }
@@ -28,6 +27,7 @@
         tr:nth-child(even) { background-color: #fcfdfe; }
         tr:hover { background-color: #f1f5f9; }
 
+        .loading-msg { text-align: center; color: #666; font-style: italic; padding: 20px; }
         .error-msg { color: #d9534f; font-weight: bold; padding: 20px; text-align: center; border: 1px solid #d9534f; border-radius: 8px; background: #fff5f5; }
     </style>
 </head>
@@ -35,7 +35,8 @@
 
 <div class="container">
     <h1>Campeonato Vito Dumas</h1>
-    <div id="status" class="status-bar">Conectando con Google Sheets...</div>
+    
+    <div id="status"></div>
 
     <div class="tabs">
         <button class="tab-btn active" onclick="openTab(event, 'General')">General</button>
@@ -59,29 +60,26 @@
 </div>
 
 <script>
-    // ID DE TU HOJA YA CONFIGURADO
     const SHEET_ID = '1w2EHN7ujpacckhvw8ok0I4HWtu1r63UNWF9zI_-Rh6o'; 
 
     function openTab(evt, tabName) {
         document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(tabName).classList.add('active');
-        evt.currentTarget.classList.add('active');
+        if(evt) evt.currentTarget.classList.add('active');
     }
 
     async function cargarDatos() {
         const statusDiv = document.getElementById('status');
-        // Usamos el formato de exportación directa de Google
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=xlsx`;
         
         try {
             const response = await fetch(url);
-            if (!response.ok) throw new Error('No se pudo acceder al archivo. Verifica la publicación.');
+            if (!response.ok) throw new Error('No se pudo acceder al archivo.');
             
             const arrayBuffer = await response.arrayBuffer();
             const workbook = XLSX.read(new Uint8Array(arrayBuffer), {type: 'array'});
 
-            // Procesamos cada pestaña
             const sheetsMap = {
                 "General": "General",
                 "Serie A": "SerieA",
@@ -89,22 +87,15 @@
                 "Serie C": "SerieC"
             };
 
-            let cargadas = 0;
             for (const [nombreExcel, idHTML] of Object.entries(sheetsMap)) {
-                if (procesarHoja(workbook, nombreExcel, idHTML)) {
-                    cargadas++;
-                }
+                procesarHoja(workbook, nombreExcel, idHTML);
             }
 
-            if (cargadas > 0) {
-                statusDiv.innerHTML = "✅ Resultados actualizados en tiempo real";
-                statusDiv.style.color = "#28a745";
-            } else {
-                throw new Error('No se encontraron las pestañas "General", "Serie A", etc. en el Excel.');
-            }
+            // Limpiamos cualquier mensaje de carga si todo salió bien
+            statusDiv.innerHTML = "";
 
         } catch (error) {
-            statusDiv.innerHTML = `<div class="error-msg">⚠️ Error: ${error.message}<br><small>Asegúrate de haber ido a Archivo > Compartir > Publicar en la Web en Google Sheets.</small></div>`;
+            statusDiv.innerHTML = `<div class="error-msg">⚠️ Error al cargar datos. Verifica la conexión.</div>`;
             console.error(error);
         }
     }
@@ -121,12 +112,10 @@
         theadRow.innerHTML = "";
 
         if (json.length > 0) {
-            // Cabeceras
             Object.keys(json[0]).forEach(key => {
                 theadRow.innerHTML += `<th>${key}</th>`;
             });
 
-            // Filas
             json.forEach(fila => {
                 let rowHtml = "<tr>";
                 Object.values(fila).forEach(valor => {
@@ -140,7 +129,6 @@
         return false;
     }
 
-    // Ejecutar al cargar la página
     window.onload = cargarDatos;
 </script>
 

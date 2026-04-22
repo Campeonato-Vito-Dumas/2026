@@ -5,22 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Campeonato Vito Dumas 2026</title>
     
-    <link rel="icon" type="image/png" href="favicon.png?v=2">
+    <link rel="icon" type="image/png" href="favicon.png">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f9; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         h1 { color: #003366; text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 30px; }
         
-        /* Sistema de Pestañas */
         .tabs { display: flex; justify-content: center; gap: 5px; margin-bottom: 25px; border-bottom: 2px solid #eee; flex-wrap: wrap; }
         .tab-btn { padding: 12px 20px; border: none; background: none; cursor: pointer; font-size: 16px; color: #888; font-weight: 500; transition: 0.3s; border-bottom: 3px solid transparent; }
         .tab-btn:hover { color: #005b96; background: #f0f5f9; }
         .tab-btn.active { color: #005b96; border-bottom: 3px solid #005b96; font-weight: bold; }
 
-        /* Contenido y Tablas */
         .content { display: none; overflow-x: auto; }
         .content.active { display: block; animation: fadeIn 0.5s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -62,7 +59,6 @@
 </div>
 
 <script>
-    // ID de tu Google Sheet
     const SHEET_ID = '1w2EHN7ujpacckhvw8ok0I4HWtu1r63UNWF9zI_-Rh6o'; 
 
     function openTab(evt, tabName) {
@@ -83,7 +79,6 @@
             const arrayBuffer = await response.arrayBuffer();
             const workbook = XLSX.read(new Uint8Array(arrayBuffer), {type: 'array'});
 
-            // Mapeo de nombres de pestañas del Excel a IDs de la web
             const sheetsMap = {
                 "General": "General",
                 "Serie A": "SerieA",
@@ -95,10 +90,10 @@
                 procesarHoja(workbook, nombreExcel, idHTML);
             }
 
-            statusDiv.innerHTML = ""; // Limpiar errores si todo sale bien
+            statusDiv.innerHTML = "";
 
         } catch (error) {
-            statusDiv.innerHTML = `<div class="error-msg">⚠️ Error al cargar datos. Verifica la conexión o la publicación del Excel.</div>`;
+            statusDiv.innerHTML = `<div class="error-msg">⚠️ Error al cargar datos. Verifica la conexión.</div>`;
             console.error(error);
         }
     }
@@ -114,4 +109,26 @@
         tbody.innerHTML = "";
         theadRow.innerHTML = "";
 
-        if (
+        if (json.length > 0) {
+            Object.keys(json[0]).forEach(key => {
+                theadRow.innerHTML += `<th>${key}</th>`;
+            });
+
+            json.forEach(fila => {
+                let rowHtml = "<tr>";
+                Object.values(fila).forEach(valor => {
+                    rowHtml += `<td>${valor || ''}</td>`;
+                });
+                rowHtml += "</tr>";
+                tbody.innerHTML += rowHtml;
+            });
+            return true;
+        }
+        return false;
+    }
+
+    window.onload = cargarDatos;
+</script>
+
+</body>
+</html>

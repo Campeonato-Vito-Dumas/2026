@@ -7,6 +7,11 @@
     
     <link rel="icon" type="image/png" href="favicon.png?v=3">
     
+    <link rel="apple-touch-icon" href="favicon.png?v=3">
+    
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Vito Dumas">
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <style>
@@ -99,12 +104,12 @@
 
             loader.style.display = 'none';
             if (tablasEncontradas === 0) {
-                statusDiv.innerHTML = `<div class="error-msg">⚠️ No se encontraron las pestañas en el Excel. Revisa los nombres.</div>`;
+                statusDiv.innerHTML = `<div class="error-msg">⚠️ No se encontraron las pestañas en el Excel.</div>`;
             }
 
         } catch (error) {
             loader.style.display = 'none';
-            statusDiv.innerHTML = `<div class="error-msg">⚠️ Error al cargar datos. Verifica la publicación del Excel.</div>`;
+            statusDiv.innerHTML = `<div class="error-msg">⚠️ Error al cargar datos.</div>`;
             console.error(error);
         }
     }

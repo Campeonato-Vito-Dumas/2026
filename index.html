@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Campeonato Vito Dumas 2026</title>
     
-    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="icon" type="image/png" href="favicon.png?v=3">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f9; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
@@ -29,12 +30,14 @@
         tr:hover { background-color: #f1f5f9; }
 
         .error-msg { color: #d9534f; font-weight: bold; padding: 20px; text-align: center; border: 1px solid #d9534f; border-radius: 8px; background: #fff5f5; }
+        #loading-indicator { text-align: center; color: #666; font-style: italic; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>Campeonato Vito Dumas 2026</h1>
+    <div id="loading-indicator">Cargando posiciones...</div>
     <div id="status"></div>
 
     <div class="tabs">
@@ -70,11 +73,12 @@
 
     async function cargarDatos() {
         const statusDiv = document.getElementById('status');
+        const loader = document.getElementById('loading-indicator');
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=xlsx`;
         
         try {
             const response = await fetch(url);
-            if (!response.ok) throw new Error('No se pudo acceder al archivo.');
+            if (!response.ok) throw new Error('Error de conexión con la planilla.');
             
             const arrayBuffer = await response.arrayBuffer();
             const workbook = XLSX.read(new Uint8Array(arrayBuffer), {type: 'array'});
@@ -86,14 +90,21 @@
                 "Serie C": "SerieC"
             };
 
+            let tablasEncontradas = 0;
             for (const [nombreExcel, idHTML] of Object.entries(sheetsMap)) {
-                procesarHoja(workbook, nombreExcel, idHTML);
+                if (procesarHoja(workbook, nombreExcel, idHTML)) {
+                    tablasEncontradas++;
+                }
             }
 
-            statusDiv.innerHTML = "";
+            loader.style.display = 'none';
+            if (tablasEncontradas === 0) {
+                statusDiv.innerHTML = `<div class="error-msg">⚠️ No se encontraron las pestañas en el Excel. Revisa los nombres.</div>`;
+            }
 
         } catch (error) {
-            statusDiv.innerHTML = `<div class="error-msg">⚠️ Error al cargar datos. Verifica la conexión.</div>`;
+            loader.style.display = 'none';
+            statusDiv.innerHTML = `<div class="error-msg">⚠️ Error al cargar datos. Verifica la publicación del Excel.</div>`;
             console.error(error);
         }
     }
@@ -106,6 +117,8 @@
         const tbody = document.querySelector(`#table-${idDestino} tbody`);
         const theadRow = document.getElementById(`head-${idDestino}`);
         
+        if (!tbody || !theadRow) return false;
+        
         tbody.innerHTML = "";
         theadRow.innerHTML = "";
 
@@ -116,8 +129,8 @@
 
             json.forEach(fila => {
                 let rowHtml = "<tr>";
-                Object.values(fila).forEach(valor => {
-                    rowHtml += `<td>${valor || ''}</td>`;
+                Object.keys(json[0]).forEach(key => {
+                    rowHtml += `<td>${fila[key] !== undefined ? fila[key] : ''}</td>`;
                 });
                 rowHtml += "</tr>";
                 tbody.innerHTML += rowHtml;
